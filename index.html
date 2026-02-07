@@ -1,6 +1,433 @@
-<html>
-<head>Tuner</head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chromatic Music Instrument Tuner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .tuner-container {
+            background: #2a2a2a;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+            letter-spacing: 2px;
+        }
+
+        .meter-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            margin-bottom: 30px;
+            background: #1a1a1a;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .meter {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .meter-scale {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            height: 80%;
+        }
+
+        .needle {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            width: 4px;
+            height: 60%;
+            background: linear-gradient(to top, #ff4444, #ff6666);
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(0deg);
+            transition: transform 0.1s ease-out;
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+        }
+
+        .needle::before {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: #333;
+            border-radius: 50%;
+            border: 3px solid #ff4444;
+        }
+
+        .scale-marks {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .scale-mark {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            width: 2px;
+            height: 30px;
+            background: #666;
+            transform-origin: bottom center;
+        }
+
+        .scale-mark.major {
+            height: 40px;
+            width: 3px;
+            background: #888;
+        }
+
+        .scale-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #aaa;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .note-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .current-note {
+            font-size: 48px;
+            font-weight: bold;
+            color: #4CAF50;
+            text-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .frequency {
+            font-size: 18px;
+            color: #aaa;
+        }
+
+        .cents-display {
+            font-size: 16px;
+            color: #fff;
+            margin-top: 5px;
+        }
+
+        .cents-display.sharp {
+            color: #ff9800;
+        }
+
+        .cents-display.flat {
+            color: #2196F3;
+        }
+
+        .cents-display.intune {
+            color: #4CAF50;
+        }
+
+        .controls {
+            text-align: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.active {
+            background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            color: #888;
+            font-size: 14px;
+        }
+    </style>
+</head>
 <body>
-	Content will be here.
+    <div class="tuner-container">
+        <h1>🎵 TUNER</h1>
+        
+        <div class="note-display">
+            <div class="current-note" id="noteDisplay">--</div>
+            <div class="frequency" id="frequencyDisplay">--- Hz</div>
+            <div class="cents-display" id="centsDisplay">-- cents</div>
+        </div>
+
+        <div class="meter-container">
+            <div class="meter">
+                <div class="scale-marks" id="scaleMarks"></div>
+                <div class="needle" id="needle"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startButton">Start Tuner</button>
+            <div class="status" id="status">Press Start to begin</div>
+        </div>
+    </div>
+
+    <script>
+        // Note frequencies (A4 = 440 Hz standard tuning)
+        const noteStrings = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        
+        let audioContext;
+        let analyser;
+        let microphone;
+        let scriptProcessor;
+        let isActive = false;
+
+        const startButton = document.getElementById('startButton');
+        const noteDisplay = document.getElementById('noteDisplay');
+        const frequencyDisplay = document.getElementById('frequencyDisplay');
+        const centsDisplay = document.getElementById('centsDisplay');
+        const needle = document.getElementById('needle');
+        const status = document.getElementById('status');
+
+        // Create scale marks
+        const scaleMarks = document.getElementById('scaleMarks');
+        for (let i = -50; i <= 50; i += 10) {
+            const mark = document.createElement('div');
+            mark.className = i === 0 ? 'scale-mark major' : 'scale-mark';
+            mark.style.transform = `translateX(-50%) rotate(${i * 0.9}deg)`;
+            
+            if (i % 20 === 0) {
+                const label = document.createElement('div');
+                label.className = 'scale-label';
+                label.textContent = i > 0 ? `+${i}` : i;
+                mark.appendChild(label);
+            }
+            
+            scaleMarks.appendChild(mark);
+        }
+
+        // Autocorrelation algorithm for pitch detection
+        function autoCorrelate(buffer, sampleRate) {
+            const SIZE = buffer.length;
+            const MAX_SAMPLES = Math.floor(SIZE / 2);
+            let best_offset = -1;
+            let best_correlation = 0;
+            let rms = 0;
+
+            // Calculate RMS (root mean square) to detect if there's enough signal
+            for (let i = 0; i < SIZE; i++) {
+                const val = buffer[i];
+                rms += val * val;
+            }
+            rms = Math.sqrt(rms / SIZE);
+            
+            // Not enough signal
+            if (rms < 0.01) return -1;
+
+            // Find the best correlation - looking for the smallest offset (highest frequency)
+            // Otherwise things like D4 will rather show up as G2, which is obviously not what we want
+            let lastCorrelation = 1;
+            for (let offset = 1; offset < MAX_SAMPLES; offset++) {
+                let correlation = 0;
+
+                for (let i = 0; i < MAX_SAMPLES; i++) {
+                    correlation += Math.abs(buffer[i] - buffer[i + offset]);
+                }
+
+                correlation = 1 - (correlation / MAX_SAMPLES);
+                
+                // Look for first strong correlation peak after a dip
+                if (correlation > 0.9) {
+                    if (lastCorrelation < 0.9) {
+                        // Found rising edge of correlation peak
+                        // Refine around this offset to find the true peak
+                        let peak_offset = offset;
+                        let peak_correlation = correlation;
+                        
+                        for (let j = offset; j < Math.min(offset + 10, MAX_SAMPLES); j++) {
+                            let test_correlation = 0;
+                            for (let i = 0; i < MAX_SAMPLES; i++) {
+                                test_correlation += Math.abs(buffer[i] - buffer[i + j]);
+                            }
+                            test_correlation = 1 - (test_correlation / MAX_SAMPLES);
+                            
+                            if (test_correlation > peak_correlation) {
+                                peak_correlation = test_correlation;
+                                peak_offset = j;
+                            }
+                        }
+                        
+                        best_offset = peak_offset;
+                        best_correlation = peak_correlation;
+                        break; // Take the first (highest frequency) strong correlation
+                    }
+                }
+                
+                lastCorrelation = correlation;
+            }
+
+            if (best_offset !== -1 && best_correlation > 0.9) {
+                return sampleRate / best_offset;
+            }
+            return -1;
+        }
+
+        // Convert frequency to note name and cents offset
+        function frequencyToNote(frequency) {
+            const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
+            const roundedNoteNum = Math.round(noteNum);
+            const cents = Math.floor((noteNum - roundedNoteNum) * 100);
+            const noteIndex = (roundedNoteNum + 69) % 12;
+            const octave = Math.floor((roundedNoteNum + 69) / 12);
+            
+            return {
+                note: noteStrings[noteIndex < 0 ? noteIndex + 12 : noteIndex],
+                octave: octave,
+                cents: cents,
+                frequency: frequency
+            };
+        }
+
+        // Update the display
+        function updateDisplay(frequency) {
+            if (frequency === -1) {
+                noteDisplay.textContent = '--';
+                frequencyDisplay.textContent = '--- Hz';
+                centsDisplay.textContent = '-- cents';
+                needle.style.transform = 'translateX(-50%) rotate(0deg)';
+                return;
+            }
+
+            const noteInfo = frequencyToNote(frequency);
+            noteDisplay.textContent = `${noteInfo.note}${noteInfo.octave}`;
+            frequencyDisplay.textContent = `${frequency.toFixed(1)} Hz`;
+            
+            const cents = noteInfo.cents;
+            const centsText = cents > 0 ? `+${cents}` : cents;
+            centsDisplay.textContent = `${centsText} cents`;
+            
+            // Update cents display color
+            centsDisplay.className = 'cents-display';
+            if (Math.abs(cents) < 5) {
+                centsDisplay.classList.add('intune');
+            } else if (cents > 0) {
+                centsDisplay.classList.add('sharp');
+            } else {
+                centsDisplay.classList.add('flat');
+            }
+            
+            // Rotate needle (-45 to +45 degrees based on cents)
+            const needleRotation = Math.max(-45, Math.min(45, cents * 0.9));
+            needle.style.transform = `translateX(-50%) rotate(${needleRotation}deg)`;
+        }
+
+        // Process audio
+        function processAudio() {
+            const buffer = new Float32Array(analyser.fftSize);
+            analyser.getFloatTimeDomainData(buffer);
+            const frequency = autoCorrelate(buffer, audioContext.sampleRate);
+            updateDisplay(frequency);
+        }
+
+        // Start/Stop tuner
+        async function toggleTuner() {
+            if (!isActive) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 4096;
+
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    microphone.connect(analyser);
+
+                    scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                    analyser.connect(scriptProcessor);
+                    scriptProcessor.connect(audioContext.destination);
+                    scriptProcessor.onaudioprocess = processAudio;
+
+                    isActive = true;
+                    startButton.textContent = 'Stop Tuner';
+                    startButton.classList.add('active');
+                    status.textContent = 'Listening...';
+                } catch (error) {
+                    console.error('Error accessing microphone:', error);
+                    status.textContent = 'Error: Could not access microphone';
+                }
+            } else {
+                if (scriptProcessor) {
+                    scriptProcessor.disconnect();
+                    scriptProcessor.onaudioprocess = null;
+                }
+                if (microphone) {
+                    microphone.disconnect();
+                    microphone.mediaStream.getTracks().forEach(track => track.stop());
+                }
+                if (analyser) {
+                    analyser.disconnect();
+                }
+                if (audioContext) {
+                    audioContext.close();
+                }
+
+                isActive = false;
+                startButton.textContent = 'Start Tuner';
+                startButton.classList.remove('active');
+                status.textContent = 'Stopped';
+                updateDisplay(-1);
+            }
+        }
+
+        startButton.addEventListener('click', toggleTuner);
+    </script>
 </body>
 </html>
